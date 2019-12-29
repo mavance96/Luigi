@@ -46,7 +46,14 @@ How to run debug:
     * navigate to `SE4330-Luigi/MarioApi/` and run the command `python manage.py runserver`.
 
 How to run tests:
-    * navigate to `SE4330-Luigi/MarioApi/` and run the command `test command`.
+    * navigate to `SE4330-Luigi/MarioApi/` and run the command `python manage.py test ApiV1/`.
+
+How to create tests:
+    All tests should live under `ApiV1/UnitTests/`
+    Any stubs that may be needed can live in UnitTests/stubs or within your tests fie itself if the stubs are not large.
+    Each Unit test file/class should correlate to one source file and its name must start with 'test' for django's test discovery to find it. format: `test*.py`
+
+    The class should inherit from `django.test.TestCase`
 
 # Contribute
 To contribute, clone this repo locally then create a feature branch and make a pull request to develop to submit your changes for review. New tests should be written for any new logic.
