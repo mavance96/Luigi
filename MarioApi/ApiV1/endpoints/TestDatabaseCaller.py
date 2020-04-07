@@ -14,78 +14,16 @@ class TestDatabaseCaller():
             'DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database + ';UID=' + username + ';PWD=' + password)
         self.cursor = self.cnxn.cursor()
 
-    def pipeline_configs_update(self, configID, buildID, pipelineID, agentID, driveType, environment, globalFlag):
-        """Updates the PipelineConfigurations SQL table."""
-        try:
-            #Converts globalFlag to a string if it's being represented by 0 or 1
-            if (type(globalFlag) == 'int' or type(globalFlag) == 'bool'):
-                if globalFlag == 1 or globalFlag == True:
-                    globalFlag = 'True'
-                if globalFlag == 0 or globalFlag == False:
-                    globalFlag = 'False'
-            #Calls SQL code on the database to update the table.
-            self.cursor.execute("update testPipelineConfigurations "
-                                "set buildID = '" + str(buildID) + "' ,"
-                                "pipelineID = '" + str(pipelineID) + "' ,"
-                                "agentID = '" + str(agentID) + "' ,"
-                                "driveType = '" + str(driveType) + "' ,"
-                                "environment = '" + str(environment) + "' ,"
-                                "globalFlag = '" + str(globalFlag) + "' "
-                                "where configID = '" + str(configID) + "';")
-            # Commits to update the table
-            self.cnxn.commit()
-            return True
-        except:
+    def valid_input(self, input):
+        if ("'" in input or '"' in input or '=' in input or '(' in input or ')' in input or ';' in input or '*' in input):
             return False
+        return True
 
-    def pipeline_configs_insert(self, configID, buildID, pipelineID, agentID, driveType, environment, globalFlag):
-        """Inserts a value to the PipelineConfigurations table."""
-        try:
-            takenNames = self.pipeline_configs_get_names()
-            if (configID in takenNames):
-                return False
-            #Converts globalFlag to a string if it's being represented by 0 or 1
-            if type(globalFlag) == 'int' or type(globalFlag) == 'bool':
-                if globalFlag == 1 or globalFlag == True:
-                    globalFlag = 'True'
-                if globalFlag == 0 or globalFlag == False:
-                    globalFlag = 'False'
-            #Calls SQL code on the database to insert into the table.
-            self.cursor.execute("insert into testPipelineConfigurations (configID, buildID, pipelineID, agentID, driveType, environment, globalFlag) values "
-                                "('" + str(configID) + "', '" + str(buildID) + "', '" + str(pipelineID) + "', '" + str(agentID) + "', '" +
-                                str(driveType) + "', '" + str(environment) + "', '" + str(globalFlag) + "');")
-            # Commits to update the table
-            self.cnxn.commit()
-            return True
-        except:
-            return False
-
-    def pipeline_configs_delete(self, configID):
-        """Deletes a value from the PipelineConfigurations table."""
-        try:
-            #First deletes from tables that require foreign key to the configID.
-            self.cursor.execute("delete from testaccess "
-                                "where configID = '" + str(configID) + "';")
-            self.cursor.execute("delete from testartifacts "
-                                "where configID = '" + str(configID) + "';")
-            self.cursor.execute("delete from testtags "
-                                "where configID = '" + str(configID) + "';")
-            # Commits to update the table
-            self.cnxn.commit()
-            #Lastly deletes from the pipelineConfigurations table.
-            self.cursor.execute("delete from testpipelineConfigurations "
-                                "where configID = '" + str(configID) + "';")
-            # Commits to update the table
-            self.cnxn.commit()
-            return True
-        except:
-            return False
-
-    def pipeline_configs_get_names(self):
-        """Retrieves all pipeline configuration names."""
-        #Calls SQL code on the database to retrieve all configID names.
-        self.cursor.execute("select configID from testPipelineConfigurations;")
-        #Creates and returns a list of all the names.
+    def drive_types_get(self):
+        """Gets a list of all drive types from the DriveTypes table."""
+        # Calls SQL code on the database to select all drive types
+        self.cursor.execute("select * from testDrivetypes;")
+        # Creates and returns a list of drive types
         values = []
         row = self.cursor.fetchone()
         while row:
@@ -93,146 +31,33 @@ class TestDatabaseCaller():
             row = self.cursor.fetchone()
         return values
 
-    def pipeline_configs_get(self, configID):
-        """Retrieves all information of a specific configuration."""
-        #Calls SQL code on the database to retrieve all information about a configuration.
-        self.cursor.execute("select * from testPipelineConfigurations "
-                            "where configID = '" + str(configID) + "';")
-        #Creates a dictionary of all the information of the configuration.
-        row = self.cursor.fetchone()
-        configuration = {'configID' : str(row[0]),
-                         'buildID' : str(row[1]),
-                         'pipelineID' : str(row[2]),
-                         'agentID' : str(row[3]),
-                         'driveType' : str(row[4]),
-                         'environment' : str(row[5]),
-                         'globalFlag' : str(row[6])}
-        return configuration
-
-    def access_delete(self, configID, userName):
-        """Deletes a value from the Access table."""
+    def drive_types_insert(self, drivetype):
+        """Insert a drive type into the database with name drivetype"""
+        if (not (self.valid_input(drivetype))):
+            return False
         try:
-            #Calls SQL code on the database to delete an entry from the Access table.
-            self.cursor.execute("delete from testAccess "
-                                "where configID = '" + str(configID) + "' AND userName = '" + str(userName) +"';")
-            # Commits to update the table
+            self.cursor.execute("insert into testDrivetypes (drivetype) values ('" + (drivetype) + "');")
             self.cnxn.commit()
             return True
         except:
             return False
 
-    def access_insert(self, configID, userName):
-        """Inserts a value into the Access table."""
+    def environments_insert(self, environment):
+        """Insert an environment into the database with name environment"""
+        if (not (self.valid_input(environment))):
+            return False
         try:
-            values = self.__access_get_by_username(userName)
-            if (configID in values):
-                return False
-            #Calls SQL code on the database to insert an entry into the Access table.
-            self.cursor.execute("insert into testAccess (configID, userName) values ('" + str(configID) + "', '" + str(userName) + "');")
-            # Commits to update the table
+            self.cursor.execute("insert into testEnvironments (environment) values ('" + (environment) + "');")
             self.cnxn.commit()
             return True
         except:
             return False
 
-    def __access_get_by_username(self, userName):
-        """Gets the configurations that a user has been given explicit access to."""
-        self.cursor.execute("select configID from testaccess "
-                            "where userName = '" + str(userName) + "';")
-        values = []
-        row = self.cursor.fetchone()
-        while row:
-            values.append(str(row[0]))
-            row = self.cursor.fetchone()
-        return values
-
-    def access_get(self, userName):
-        """Gets the configurations available to a given user."""
-        #Calls SQL code on the database to retrieve all configuration the user has access to, whether the configuration is public
-        #or the user has private access
-        self.cursor.execute("select p.configId from testPipelineConfigurations p "
-                            "left join testAccess a "
-                            "on p.configID = a.configID "
-                            "where a.userName = '" + str(userName) + "' OR p.globalFlag = 1;")
-        #Creates and returns a list of configuration names
-        values = []
-        row = self.cursor.fetchone()
-        while row:
-            values.append(str(row[0]))
-            row = self.cursor.fetchone()
-        return values
-
-    def artifacts_delete(self, configID, artifactID):
-        """Deletes a value from the Artifacts table."""
-        try:
-            #Calls SQL code on the database to delete an entry from the Artifacts table.
-            self.cursor.execute("delete from testArtifacts "
-                                "where configID = '" + str(configID) + "' AND artifactID = '" + str(artifactID) + "';")
-            # Commits to update the table
-            self.cnxn.commit()
-            return True
-        except:
-            return False
-
-    def artifacts_insert(self, configID, artifactID):
-        """Inserts a value into the Artifacts table."""
-        try:
-            artifacts = self.artifacts_get(configID)
-            if (artifactID in artifacts):
-                return False
-            #Calls SQL code on the database to insert an entry into the Artifacts table.
-            self.cursor.execute("insert into testArtifacts (configID, artifactID) values ('" + str(configID) + "', '" + str(artifactID) + "');")
-            # Commits to update the table
-            self.cnxn.commit()
-            return True
-        except:
-            return False
-
-    def artifacts_get(self, configID):
-        """Gets the artifacts for a given configuration."""\
-        #Calls SQL code on the database to select all artifact names associated with a configuration ID.
-        self.cursor.execute("select artifactID from testArtifacts "
-                            "where configID = '" + str(configID) + "';")
-        #Creates and returns a list of artifact names
-        values = []
-        row = self.cursor.fetchone()
-        while row:
-            values.append(str(row[0]))
-            row = self.cursor.fetchone()
-        return values
-
-    def tags_insert(self, configID, tagName):
-        """Inserts a value into the Tags table."""
-        try:
-            tagNames = self.tags_get(configID)
-            if (tagName in tagNames):
-                return False
-            #Calls SQL code on the database to insert an entry into the tags table.
-            self.cursor.execute("insert into testtags (configID, tagName) values ('" + str(configID) + "', '" + str(tagName) + "');")
-            # Commits to update the table
-            self.cnxn.commit()
-            return True
-        except:
-            return False
-
-    def tags_delete(self, configID, tagName):
-        """Deletes a value from the Tags table."""
-        try:
-            #Calls SQL code on the database to delete an entry from the tags table.
-            self.cursor.execute("delete from testtags "
-                                "where configID = '" + str(configID) + "' AND tagName = '" + str(tagName) + "';")
-            #Commits to update the table
-            self.cnxn.commit()
-            return True
-        except:
-            return False
-
-    def tags_get(self, configID):
-        """Gets the tags for a given configuration."""
-        #Calls SQL code on the database to select all tags associated with a configuration ID.
-        self.cursor.execute("Select tagName from testTags "
-                            "where configID = '" + str(configID) + "';")
-        #Creates and returns a list of tags
+    def environments_get(self):
+        """Gets a list of all environments from the Environments table."""
+        # Calls SQL code on the database to select all environments
+        self.cursor.execute("Select * from testEnvironments;")
+        # Creates and returns a list of environments
         values = []
         row = self.cursor.fetchone()
         while row:
@@ -243,7 +68,7 @@ class TestDatabaseCaller():
     def drive_types_get(self):
         """Gets a list of drive types from the DriveTypes table."""
         #Calls SQL code on the database to select all drive types
-        self.cursor.execute("select * from testdrivetypes;")
+        self.cursor.execute("select * from testDrivetypes;")
         #Creates and returns a list of drive types
         values = []
         row = self.cursor.fetchone()
@@ -255,7 +80,7 @@ class TestDatabaseCaller():
     def environment_get(self):
         """Gets a list of environments from the Environments table."""
         #Calls SQL code on the database to select all environments
-        self.cursor.execute("Select * from testenvironments;")
+        self.cursor.execute("Select * from testEnvironments;")
         #Creates and returns a list of environments
         values = []
         row = self.cursor.fetchone()
@@ -264,29 +89,21 @@ class TestDatabaseCaller():
             row = self.cursor.fetchone()
         return values
 
-    def buildIDs_get(self, driveType, testEnv):
-        """Gets a buildID given the drive type and the test environment."""
-        self.cursor.execute("Select buildID from testbuildIDs "
-                            "where driveType = '" + str(driveType) + "' and testEnvironment = '" + str(testEnv) + "';")
+    def buildIDs_get(self, driveType, environment):
+        """Gets a buildID given the drive type and the  environment."""
+        if (not (self.valid_input(driveType) and self.valid_input(environment))):
+            return False
+        self.cursor.execute("Select buildID from testBuildIDs "
+                            "where driveType = '" + str(driveType) + "' and Environment = '" + str(environment) + "';")
         row = self.cursor.fetchone()
         if row:
             value = str(row[0])
             return value
         return None
 
-    def absoluteIDs_get(self, buildID):
-        """Gets the absolute IDs of builds associated with buildID"""
-        self.cursor.execute("Select absoluteID from testabsoluteIDs "
-                            "where buildID = '" + str(buildID) + "';")
-        values = []
-        row = self.cursor.fetchone()
-        while row:
-            values.append(str(row[0]))
-            row = self.cursor.fetchone()
-        return values
-
     def buildIDs_getAll(self):
-        self.cursor.execute("Select buildID from testbuildIDs; ")
+        """Gets all builids of builds in the database."""
+        self.cursor.execute("Select buildID from testBuildIDs; ")
         values = []
         row = self.cursor.fetchone()
         while row:
@@ -294,15 +111,308 @@ class TestDatabaseCaller():
             row = self.cursor.fetchone()
         return values
 
-    def buildIDs_insert(self, buildID, driveType, testEnv):
+    def buildIDs_insert(self, buildID, driveType, environment):
         """Insert a value into the buildIDs table."""
-        value = self.buildIDs_get(driveType, testEnv)
+        if (not (self.valid_input(buildID) and self.valid_input(driveType) and self.valid_input(environment))):
+            return False
+        value = self.buildIDs_get(driveType, environment)
         if (value):
             return False
         value = self.buildIDs_getAll()
         if str(buildID) in value:
             return False
-        self.cursor.execute("Insert into testbuildIDs (buildID, driveType, testEnvironment) values ('"
-                            + str(buildID) + "', '" + str(driveType) + "', '" + str(testEnv) + "');")
+        self.cursor.execute("Insert into testBuildIDs (buildID, driveType, Environment) values ('"
+                            + str(buildID) + "', '" + str(driveType) + "', '" + str(environment) + "');")
         self.cnxn.commit()
         return True
+
+    def powercards_insert(self, powercard, value):
+        '''Inserts a power card into the database with name powercard'''
+        try:
+            if (not (self.valid_input(powercard) and self.valid_input(value))):
+                return False
+            powercards = self.powercards_get_names()
+            if (powercard in powercards):
+                return False
+            self.cursor.execute(
+                "insert into testPowerCards (powerCardID, value) values ('" + str(powercard) + "', '" + str(value) + "');")
+            self.cnxn.commit()
+            return True
+        except:
+            return False
+
+    def powercards_delete(self, powercard):
+        '''Deletes the power card from the database with name powercard'''
+        try:
+            if (not (self.valid_input(powercard))):
+                return False
+            self.cursor.execute("delete from testConfigurations where powerCardID = '" + str(powercard) + "';")
+            self.cnxn.commit()
+            self.cursor.execute("delete from testPowercards where powercardID = '" + str(powercard) + "';")
+            self.cnxn.commit()
+            return True
+        except:
+            return False
+
+    def powercards_get_names(self):
+        '''Gets the name of all power cards from the database'''
+        self.cursor.execute("Select powercardID from testPowercards; ")
+        values = []
+        row = self.cursor.fetchone()
+        while row:
+            values.append(str(row[0]))
+            row = self.cursor.fetchone()
+        return values
+
+    def powercards_get(self, powercard):
+        if (not (self.valid_input(powercard))):
+            return False
+        powercards = self.powercards_get_names()
+        if (powercard not in powercards):
+            return False
+        self.cursor.execute("Select * from testPowercards where powercardID = '" + str(powercard) + "';")
+        row = self.cursor.fetchone()
+        if row:
+            values = {'powercardID': str(row[0]),
+                      'value': str(row[1])}
+        return values
+
+    def applications_insert(self, application, value):
+        '''Inserts an application into the database with name application and value of value'''
+        try:
+            if (not (self.valid_input(application) and self.valid_input(value))):
+                return False
+            applications = self.applications_get_names()
+            if (application in applications):
+                return False
+            self.cursor.execute(
+                "insert into testApplications (applicationID, value) values ('" + str(application) + "', '" + str(
+                    value) + "');")
+            self.cnxn.commit()
+            return True
+        except:
+            return False
+
+    def applications_delete(self, application):
+        '''Deletes an application from the database with name application'''
+        try:
+            if (not (self.valid_input(application))):
+                return False
+            self.cursor.execute("delete from testConfigurations where applicationID = '" + str(application) + "';")
+            self.cnxn.commit()
+            self.cursor.execute("delete from testApplications where applicationID = '" + str(application) + "';")
+            self.cnxn.commit()
+            return True
+        except:
+            return False
+
+    def applications_get_names(self):
+        '''Gets the name of all applications in the database'''
+        self.cursor.execute("Select applicationID from testApplications; ")
+        values = []
+        row = self.cursor.fetchone()
+        while row:
+            values.append(str(row[0]))
+            row = self.cursor.fetchone()
+        return values
+
+    def applications_get(self, application):
+        if (not (self.valid_input(application))):
+            return False
+        applications = self.applications_get_names()
+        if (application not in applications):
+            return False
+        self.cursor.execute("Select * from testApplications where applicationID = '" + str(application) + "';")
+        row = self.cursor.fetchone()
+        if row:
+            values = {'applicationID': str(row[0]),
+                      'value': str(row[1])}
+        return values
+
+    def firmwares_insert(self, firmware, value):
+        '''Inserts a firmware into the database with name firmware'''
+        try:
+            if (not (self.valid_input(firmware) and self.valid_input(value))):
+                return False
+            firmwares = self.firmwares_get_names()
+            if (firmware in firmwares):
+                return False
+            self.cursor.execute(
+                "insert into testFirmwares (firmwareID, value) values ('" + str(firmware) + "', '" + str(value) + "');")
+            self.cnxn.commit()
+            return True
+        except:
+            return False
+
+    def firmwares_delete(self, firmware):
+        '''Deletes firmware from the database with name firmware'''
+        try:
+            if (not (self.valid_input(firmware))):
+                return False
+            self.cursor.execute("delete from testConfigurations where firmwareID = '" + str(firmware) + "';")
+            self.cnxn.commit()
+            self.cursor.execute("delete from testFirmwares where firmwareID = '" + str(firmware) + "';")
+            self.cnxn.commit()
+            return True
+        except:
+            return False
+
+    def firmwares_get_names(self):
+        '''Gets the names of all firmwares in the database'''
+        self.cursor.execute("Select firmwareID from testFirmwares; ")
+        values = []
+        row = self.cursor.fetchone()
+        while row:
+            values.append(str(row[0]))
+            row = self.cursor.fetchone()
+        return values
+
+    def firmwares_get(self, firmware):
+        if (not (self.valid_input(firmware))):
+            return False
+        firmwares = self.firmwares_get_names()
+        if (firmware not in firmwares):
+            return False
+        self.cursor.execute("Select * from testFirmwares where firmwareID = '" + str(firmware) + "';")
+        row = self.cursor.fetchone()
+        if row:
+            values = {'firmwareID': str(row[0]),
+                      'value': str(row[1])}
+        return values
+
+    def drive_types_get_by_environment(self, environment):
+        '''Gets all drive types from builds that have the specified test environment'''
+        if (not (self.valid_input(environment))):
+            return False
+        self.cursor.execute("Select drivetype from testBuildids where environment = '" + str(environment) + "';")
+        values = []
+        row = self.cursor.fetchone()
+        while row:
+            values.append(str(row[0]))
+            row = self.cursor.fetchone()
+        return values
+
+    def environments_get_by_drive_type(self, drivetype):
+        '''Gets all environments from builds that have the specified drive type'''
+        if (not (self.valid_input(drivetype))):
+            return False
+        self.cursor.execute("Select environment from testBuildids where drivetype = '" + str(drivetype) + "';")
+        values = []
+        row = self.cursor.fetchone()
+        while row:
+            values.append(str(row[0]))
+            row = self.cursor.fetchone()
+        return values
+
+    def emails_insert(self, emailAddress, name):
+        """Inserts a new email into the emails table."""
+        try:
+            if (not (self.valid_input(emailAddress) and self.valid_input(name))):
+                return False
+            self.cursor.execute("Insert into testEmails (emailAddress, name) values ('" + str(emailAddress) +
+                                "', '" + str(name) + "');")
+            self.cnxn.commit()
+            return True
+        except:
+            return False
+
+    def emails_getAll(self):
+        """Returns all emails in the Emails table in an array of tuples in the form (address, name)."""
+        self.cursor.execute("Select * from testEmails order by name;")
+        values = []
+        row = self.cursor.fetchone()
+        while row:
+            values.append(((str(row[0])), (str(row[1]))))
+            row = self.cursor.fetchone()
+        return values
+
+    def emails_delete(self, emailAddress):
+        """Deletes an email from the emails table based on the emailAddress primary key."""
+        try:
+            if (not (self.valid_input(emailAddress))):
+                return False
+            self.cursor.execute("Delete from testEmails where emailAddress = '" + str(emailAddress) + "';")
+            self.cnxn.commit()
+            return True
+        except:
+            return False
+
+
+    def configurations_insert(self, configID, buildID, applicationID, firmwareID, powerCardID):
+        """Inserts a configuration into the configurations table."""
+        try:
+            if (not(self.valid_input(configID) and self.valid_input(buildID) and self.valid_input(applicationID) and self.valid_input(firmwareID) and self.valid_input(powerCardID))):
+                return False
+            self.cursor.execute("Insert into testConfigurations (configID, buildID, applicationID, firmwareID, powerCardID) values ('" + str(configID) + "', '" + str(buildID) +
+                                "', '" + str(applicationID) + "', '" + str(firmwareID) +"', '" + str(powerCardID) + "');")
+            self.cnxn.commit()
+            return True
+        except:
+            return False
+
+    def configurations_get_names(self):
+        """Retrieves all configIDs from the Configurations table and returns an array of them."""
+        try:
+            self.cursor.execute("Select configID from testConfigurations;")
+            row = self.cursor.fetchone()
+            values = []
+            while (row):
+                values.append(row[0])
+                row = self.cursor.fetchone()
+            return values
+        except:
+            return False
+
+    def configurations_get(self, configID):
+        """Gets the rest of the information of a configuration based on configID. Also gets the driveType and
+        environment from the buildIDs table of the confirugation's buildID"""
+        try:
+            if (not (self.valid_input(configID))):
+                return False
+            self.cursor.execute("Select buildID, applicationID, firmwareID, powerCardID from testConfigurations where configID = '" + str(configID) +"';")
+            row = self.cursor.fetchone()
+            buildID = row[0]
+            applicationID = row[1]
+            firmwareID = row[2]
+            powerCardID = row[3]
+            self.cursor.execute("Select drivetype, environment from testBuildIDs where buildID = '" + str(buildID) + "';")
+            row = self.cursor.fetchone()
+            drivetype = row[0]
+            environment = row[1]
+            values = [buildID, drivetype, environment, applicationID, firmwareID, powerCardID]
+            return values
+        except:
+            return False
+
+
+    def configurations_update(self, configID, buildID, applicationID, firmwareID, powerCardID):
+        """Updates the Configurations table entry that has matching configID."""
+        try:
+            if (not(self.valid_input(configID) and self.valid_input(buildID) and self.valid_input(applicationID) and self.valid_input(firmwareID) and self.valid_input(powerCardID))):
+                return False
+            self.cursor.execute("Update testConfigurations "
+                                "set buildID = '" + str(buildID) + "', "
+                                "applicationID = '" + str(applicationID) + "', "
+                                "firmwareID = '" + str(firmwareID) + "', "
+                                "powerCardID = '" + str(powerCardID) + "' "
+                                "where configID = '" + str(configID) + "';")
+            self.cnxn.commit()
+            return True
+        except:
+            return False
+
+    def configurations_delete(self, configID):
+        """Deletes entry from Configurations table with matching configID."""
+        try:
+            if (not(self.valid_input(configID))):
+                return False
+            self.cursor.execute("Delete from testConfigurations where configID = '" + str(configID) + "';")
+            self.cnxn.commit()
+            return True
+        except:
+            return False
+
+
+
+    #TODO Fix outputs from input sanitizer. Create inserts for all tables
+    #TODO Add nickname to BuildIDs
